@@ -1,5 +1,6 @@
 """FastAPI application main file."""
 from fastapi import FastAPI
+from core.database import engine, Base
 from fastapi.middleware.cors import CORSMiddleware
 from api.routes import data, health, stats
 from core.logging_config import logger
@@ -83,3 +84,6 @@ async def shutdown_event():
     """Log application shutdown."""
     logger.info("Kasparoo Backend API shutting down")
 
+@app.on_event("startup")
+def startup():
+    Base.metadata.create_all(bind=engine)
