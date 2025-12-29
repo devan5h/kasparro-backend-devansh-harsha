@@ -49,7 +49,7 @@ async def root():
 async def startup_event():
     """Log application startup and cleanup interrupted ETL runs."""
     logger.info("Kasparoo Backend API started")
-    
+    Base.metadata.create_all(bind=engine)
     # Cleanup interrupted ETL runs (status='running' but completed_at is NULL)
     db = SessionLocal()
     try:

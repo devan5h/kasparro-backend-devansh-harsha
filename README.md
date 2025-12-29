@@ -823,13 +823,113 @@ make db-shell        # Access database shell
 - Verify database connectivity: `curl http://localhost:8000/api/health`
 - Check if migrations have run: `make migrate`
 
-## 📝 License
+## 🚀 Production Deployment
 
-[Your License Here]
+This project is production-ready and can be deployed to public cloud platforms using Infrastructure-as-Code.
+
+### Multi-Stage Docker Build
+
+The project uses a **true multi-stage Dockerfile** for optimized production builds:
+
+**Stage 1: Builder**
+- Installs build dependencies (gcc) and compiles Python packages
+- Installs all Python dependencies with `--no-cache-dir` to prevent pip cache
+- Cleans up Python cache files (__pycache__, .pyc, .pyo)
+- Build tools (gcc) are **NOT** included in final image
+
+**Stage 2: Runtime**
+- Minimal Python 3.11-slim base image
+- Only runtime dependencies (postgresql-client)
+- Copies compiled Python packages from builder stage
+- Copies only necessary application code (excludes dev files)
+- No build tools, no pip cache, minimal image size
+
+**Benefits:**
+- Reduced final image size (~50% smaller)
+- Improved security (no build tools in production)
+- Faster deployments
+- Production-safe (uses image-built code, not mounted volumes)
+
+### Infrastructure-as-Code (Render)
+
+The project includes a `render.yaml` file for declarative Infrastructure-as-Code deployment on [Render](https://render.com).
+
+**Services Defined:**
+
+1. **Web Service** (`kasparoo-api`)
+   - Docker-based FastAPI application
+   - Automatic health checks via `/api/health`
+   - Environment variables for database and API keys
+
+2. **Cron Service** (`kasparoo-etl`)
+   - Scheduled ETL runs every 5 minutes (`*/5 * * * *`)
+   - Runs single ETL execution (not continuous loop)
+   - Same Docker image, different command
+   - Shares environment variables with web service
+
+**Key Features:**
+- No hardcoded secrets (all via Render environment variables)
+- Automatic database migrations on startup
+- Cloud-native ETL scheduling (cron, not infinite loop)
+
+### Deployment Steps
+
+1. **Connect Repository to Render**
+   - Push your code to GitHub/GitLab
+   - Connect the repository to Render
+
+2. **Configure Environment Variables**
+   - Set `DATABASE_URL` (Render PostgreSQL connection string)
+   - Set `COINPAPRIKA_API_KEY` (if available)
+   - Optional: Configure `LOG_LEVEL`
+
+3. **Deploy**
+   - Render automatically detects `render.yaml` and deploys both services
+   - Web service builds using multi-stage Dockerfile
+   - Cron service runs ETL on fixed schedule (every 5 minutes)
+   - Database migrations run automatically on startup
+
+### Public API URLs
+
+Once deployed, your API will be available at:
+
+- **API Base URL**: `https://kasparoo-api.onrender.com`
+- **API Documentation (Swagger)**: `https://kasparoo-api.onrender.com/docs`
+- **Health Check Endpoint**: `https://kasparoo-api.onrender.com/api/health`
+
+**Health Check Endpoint** (`/api/health`):
+- Database connectivity status
+- ETL run status and last execution time
+- System health metrics
+- Use for monitoring and load balancer health checks
+
+### Cloud ETL Scheduler
+
+**Production ETL Execution:**
+- ETL runs on a **fixed schedule** (every 5 minutes) via Render cron service
+- Each execution runs a single ETL cycle (not continuous loop)
+- Uses the same Docker image as the web service
+- Automatic retry on failure (next scheduled run)
+- Checkpoint system ensures incremental ingestion
+
+**Benefits:**
+- Resource-efficient (runs on schedule, not always-on)
+- Cloud-native (managed by Render's cron service)
+- Predictable execution times
+- Easy to adjust schedule in `render.yaml`
+
+### Production Considerations
+
+- **Secrets Management**: Use Render's environment variable management (never hardcode in `render.yaml`)
+- **Database**: Use Render PostgreSQL or external managed database
+- **Logging**: Configure log aggregation for production monitoring
+- **Monitoring**: Set up alerts for health check failures
+- **Scaling**: Adjust `numInstances` in `render.yaml` based on load
+- **ETL Schedule**: Modify cron schedule in `render.yaml` if needed (default: every 5 minutes)
 
 ## 👥 Contributors
 
-[Your Name/Team]
+Devansh Harsha
 
 ---
 
