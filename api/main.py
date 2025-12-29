@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from api.routes import data, health, stats
 from core.logging_config import logger
 from core.database import SessionLocal
+from services import models
 from services.models import ETLRun, ETLStatus
 from sqlalchemy import and_
 from datetime import datetime
@@ -60,18 +61,19 @@ async def startup_event():
             )
         ).all()
         
-        if interrupted_runs:
-            for run in interrupted_runs:
-                run.status = ETLStatus.FAILED
-                run.error_message = 'Interrupted due to restart'
-                run.completed_at = datetime.utcnow()
-            
-            db.commit()
-            logger.info(
+        
+        for run in interrupted_runs:
+            run.status = ETLStatus.FAILED
+            run.error_message = 'Interrupted due to restart'
+            run.completed_at = datetime.utcnow()
+
+            if interrupted_runs:        
+                db.commit()
+            ''' logger.info(
                 "Cleaned up interrupted ETL runs",
                 count=len(interrupted_runs),
                 run_ids=[r.id for r in interrupted_runs]
-            )
+            )'''
     except Exception as e:
         logger.error("Failed to cleanup interrupted ETL runs", error=str(e))
         db.rollback()
@@ -84,6 +86,3 @@ async def shutdown_event():
     """Log application shutdown."""
     logger.info("Kasparoo Backend API shutting down")
 
-@app.on_event("startup")
-def startup():
-    Base.metadata.create_all(bind=engine)
