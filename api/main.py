@@ -50,7 +50,16 @@ async def root():
 async def startup_event():
     """Log application startup and cleanup interrupted ETL runs."""
     logger.info("Kasparoo Backend API started")
-    Base.metadata.create_all(bind=engine)
+    
+    # CRITICAL: Ensure database schema exists (creates tables if migrations haven't run)
+    # This is required for production deployments (e.g., Render) where migrations
+    # may not have been executed yet. This is a safe fallback that ensures tables exist.
+    try:
+        Base.metadata.create_all(bind=engine)
+        logger.info("Database schema verified/created")
+    except Exception as e:
+        logger.warning("Failed to create tables via metadata, migrations may be needed", error=str(e))
+    
     # Cleanup interrupted ETL runs (status='running' but completed_at is NULL)
     db = SessionLocal()
     try:
@@ -61,19 +70,18 @@ async def startup_event():
             )
         ).all()
         
-        
-        for run in interrupted_runs:
-            run.status = ETLStatus.FAILED
-            run.error_message = 'Interrupted due to restart'
-            run.completed_at = datetime.utcnow()
-
-            if interrupted_runs:        
-                db.commit()
-            ''' logger.info(
+        if interrupted_runs:
+            for run in interrupted_runs:
+                run.status = ETLStatus.FAILED
+                run.error_message = 'Interrupted due to restart'
+                run.completed_at = datetime.utcnow()
+            
+            db.commit()
+            logger.info(
                 "Cleaned up interrupted ETL runs",
                 count=len(interrupted_runs),
                 run_ids=[r.id for r in interrupted_runs]
-            )'''
+            )
     except Exception as e:
         logger.error("Failed to cleanup interrupted ETL runs", error=str(e))
         db.rollback()

@@ -1,3 +1,13 @@
+# ============================================================================
+# LOCAL DEVELOPMENT ONLY - NOT FOR PRODUCTION
+# ============================================================================
+# This docker-compose.yml is configured for LOCAL DEVELOPMENT ONLY.
+# It uses --reload flags and dev bind mounts for hot-reloading during development.
+# 
+# For PRODUCTION deployment, use render.yaml (Infrastructure-as-Code).
+# Production deployments use the multi-stage Dockerfile with NO dev flags.
+# ============================================================================
+
 services:
   db:
     image: postgres:15-alpine
@@ -19,7 +29,8 @@ services:
   api:
     build: .
     container_name: kasparoo_api
-    command: sh -c "alembic upgrade head && python -m uvicorn api.main:app --host 0.0.0.0 --port 8000"
+    # LOCAL DEV ONLY: Uses --reload for hot-reloading (NOT for production)
+    command: sh -c "alembic upgrade head && python -m uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload"
     ports:
       - "8000:8000"
     environment:

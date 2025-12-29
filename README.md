@@ -823,26 +823,57 @@ make db-shell        # Access database shell
 - Verify database connectivity: `curl http://localhost:8000/api/health`
 - Check if migrations have run: `make migrate`
 
-## 🚀 Production Deployment
+## 📝 Important Note
 
-This project is production-ready and can be deployed to public cloud platforms using Infrastructure-as-Code.
+**`docker-compose.yml` is for LOCAL DEVELOPMENT ONLY.**
+
+This file uses `--reload` flags and dev bind mounts for hot-reloading during local development. 
+For production deployment, use `render.yaml` (Infrastructure-as-Code) which uses the multi-stage Dockerfile with NO dev flags.
+
+## ✅ Production Readiness
+
+This project is production-ready with the following features:
+
+- **Multi-Stage Docker Build**: Optimized builder/runtime stages with no build tools in final image
+- **Public Render Deployment**: Live at `https://kasparro-backend-devansh-harsha.onrender.com`
+- **Infrastructure-as-Code**: `render.yaml` defines web service and ETL cron job
+- **Scheduled ETL**: Cron service runs `python run_etl.py` every 5 minutes via Render
+- **Production Endpoints**: `/docs` (Swagger UI) and `/api/health` (health check) publicly accessible
+- **No Dev Flags**: All production configs use production uvicorn (no --reload)
+
+## 🚀 Production Deployment (Render)
+
+This project is production-ready and deployed to Render using Infrastructure-as-Code.
+
+### Public Deployment URLs
+
+**Live Production API:**
+- **Base URL**: `https://kasparro-backend-devansh-harsha.onrender.com`
+- **API Documentation (Swagger)**: `https://kasparro-backend-devansh-harsha.onrender.com/docs`
+- **Health Check Endpoint**: `https://kasparro-backend-devansh-harsha.onrender.com/api/health`
+
+### Multi-Stage Docker Build
+
+The production Dockerfile uses a **true multi-stage build**:
 
 ### Multi-Stage Docker Build
 
 The project uses a **true multi-stage Dockerfile** for optimized production builds:
 
 **Stage 1: Builder**
-- Installs build dependencies (gcc) and compiles Python packages
-- Installs all Python dependencies with `--no-cache-dir` to prevent pip cache
-- Cleans up Python cache files (__pycache__, .pyc, .pyo)
-- Build tools (gcc) are **NOT** included in final image
+- Base: `python:3.11-slim`
+- Installs build dependencies: `gcc`, `libpq-dev`
+- Installs Python dependencies from `requirements.txt`
+- Cleans pip cache and Python bytecode
+- **Build tools are NOT included in final image**
 
 **Stage 2: Runtime**
-- Minimal Python 3.11-slim base image
-- Only runtime dependencies (postgresql-client)
-- Copies compiled Python packages from builder stage
-- Copies only necessary application code (excludes dev files)
-- No build tools, no pip cache, minimal image size
+- Base: `python:3.11-slim`
+- Installs only runtime dependencies: `postgresql-client`
+- Copies installed Python packages from builder stage
+- Copies application source code
+- **NO gcc, NO build tools, NO dev flags**
+- Production command: `uvicorn api.main:app --host 0.0.0.0 --port 8000` (no --reload)
 
 **Benefits:**
 - Reduced final image size (~50% smaller)
@@ -850,27 +881,33 @@ The project uses a **true multi-stage Dockerfile** for optimized production buil
 - Faster deployments
 - Production-safe (uses image-built code, not mounted volumes)
 
-### Infrastructure-as-Code (Render)
+### Render Web Service
 
-The project includes a `render.yaml` file for declarative Infrastructure-as-Code deployment on [Render](https://render.com).
+The `render.yaml` defines a **Web Service** (`kasparoo-api`):
 
-**Services Defined:**
+- **Runtime**: Docker (uses multi-stage Dockerfile)
+- **Start Command**: `uvicorn api.main:app --host 0.0.0.0 --port 8000` (production mode, no --reload)
+- **Health Check Path**: `/api/health`
+- **Environment Variables**:
+  - `DATABASE_URL` (from Render PostgreSQL - configured in Render dashboard)
+  - `LOG_LEVEL=INFO`
+- **Automatic Migrations**: Runs `alembic upgrade head` before starting the API
 
-1. **Web Service** (`kasparoo-api`)
-   - Docker-based FastAPI application
-   - Automatic health checks via `/api/health`
-   - Environment variables for database and API keys
+### Render Cron ETL
 
-2. **Cron Service** (`kasparoo-etl`)
-   - Scheduled ETL runs every 5 minutes (`*/5 * * * *`)
-   - Runs single ETL execution (not continuous loop)
-   - Same Docker image, different command
-   - Shares environment variables with web service
+The `render.yaml` defines a **Cron Job** (`kasparoo-etl`):
+
+- **Schedule**: `*/5 * * * *` (every 5 minutes)
+- **Command**: `python run_etl.py` (single execution, not continuous loop)
+- **Uses Same Docker Image**: Multi-stage production image
+- **Uses Same DATABASE_URL**: Connects to same Render PostgreSQL database
+- **Automatic Migrations**: Runs `alembic upgrade head` before each ETL execution
 
 **Key Features:**
-- No hardcoded secrets (all via Render environment variables)
-- Automatic database migrations on startup
-- Cloud-native ETL scheduling (cron, not infinite loop)
+- ✅ No hardcoded secrets (all via Render environment variables)
+- ✅ Infrastructure-as-Code (version-controlled deployment config)
+- ✅ Cloud-native ETL scheduling (managed cron, not infinite loop)
+- ✅ Production-ready (no dev flags, optimized Docker image)
 
 ### Deployment Steps
 
@@ -891,11 +928,11 @@ The project includes a `render.yaml` file for declarative Infrastructure-as-Code
 
 ### Public API URLs
 
-Once deployed, your API will be available at:
+**Live Production Deployment:**
 
-- **API Base URL**: `https://kasparoo-api.onrender.com`
-- **API Documentation (Swagger)**: `https://kasparoo-api.onrender.com/docs`
-- **Health Check Endpoint**: `https://kasparoo-api.onrender.com/api/health`
+- **API Base URL**: `https://kasparro-backend-devansh-harsha.onrender.com`
+- **API Documentation (Swagger)**: `https://kasparro-backend-devansh-harsha.onrender.com/docs`
+- **Health Check Endpoint**: `https://kasparro-backend-devansh-harsha.onrender.com/api/health`
 
 **Health Check Endpoint** (`/api/health`):
 - Database connectivity status
