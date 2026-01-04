@@ -35,9 +35,14 @@ app.include_router(stats.router, prefix="/api", tags=["stats"])
 async def root():
     """Root endpoint with API information."""
     return {
+        "status": "OK",
+        "service": "Kasparoo Backend API",
         "message": "Kasparoo Backend API",
         "version": "1.0.0",
         "docs": "/docs",
+        "health_check": "/api/health",
+        "swagger_docs": "/docs",
+        "deployment": "Render",
         "endpoints": {
             "health": "/api/health",
             "data": "/api/data",

@@ -934,6 +934,16 @@ The `render.yaml` defines a **Cron Job** (`kasparoo-etl`):
 - **API Documentation (Swagger)**: `https://kasparro-backend-devansh-harsha.onrender.com/docs`
 - **Health Check Endpoint**: `https://kasparro-backend-devansh-harsha.onrender.com/api/health`
 
+### Live Deployment Verification
+
+**Deployment URL:**
+- Base: `https://kasparro-backend-devansh-harsha.onrender.com`
+
+**Direct Links:**
+- **Root Endpoint**: `https://kasparro-backend-devansh-harsha.onrender.com/` - Returns service status and deployment info
+- **Health Check**: `https://kasparro-backend-devansh-harsha.onrender.com/api/health` - Database and ETL status
+- **Swagger Documentation**: `https://kasparro-backend-devansh-harsha.onrender.com/docs` - Interactive API documentation
+
 **Health Check Endpoint** (`/api/health`):
 - Database connectivity status
 - ETL run status and last execution time
